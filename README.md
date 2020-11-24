@@ -8,8 +8,8 @@
 
 В одной консоли введите:
 
-  ./server < test_server.txt
+'''./server < test_server.txt
 
 Во второй: 
 
-  make run
+'''make run
