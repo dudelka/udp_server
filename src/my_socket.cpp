@@ -1,5 +1,6 @@
 #include "my_socket.h"
 
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <cstring>
@@ -7,18 +8,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-
-void UdpDatagramPackage::Serialize() {
-	seq_number = htonl(seq_number);
-	seq_total = htonl(seq_total);
-	type = htonl(type);
-}
-
-void UdpDatagramPackage::Deserialize() {	
-	seq_number = ntohl(seq_number);
-	seq_total = ntohl(seq_total);
-	type = ntohl(type);
-}
 
 UdpSocket::UdpSocket() {
 	sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -42,24 +31,25 @@ void UdpSocket::SetToNonBlock() {
 	}
 }
 
-bool UdpSocket::Send(uint32_t seq_number, uint32_t seq_total, uint8_t type,
-		unsigned char* id, const std::vector<unsigned char>& data, const sockaddr_in& address) const {
-	UdpDatagramPackage package = {.seq_number = seq_number, .seq_total = seq_total, .type = type};
-	std::memcpy(&package.id, id, sizeof(id));
-	std::memcpy(&package.data, data.data(), data.size());
-	size_t package_size = 0;
-	package_size += sizeof(package.seq_number);
-	package_size += sizeof(package.seq_total);
-	package_size += sizeof(package.type);
-	package_size += sizeof(package.id);
-	package_size += data.size();
-	package.Serialize();
-	int is_sent = sendto(sock_fd, (void* )&package, package_size, 0, (sockaddr* )&address, sizeof(sockaddr_in));
+static std::mutex m;
+
+bool UdpSocket::Send(
+        UdpDatagramPackage* package, 
+        size_t package_size, 
+        const sockaddr_in& address
+) const {
+	if (!package) {
+		throw std::runtime_error("Trying to accsess empty package\n");
+	}
+	package->Serialize();
+    std::lock_guard<std::mutex> guard(m);
+	int is_sent = sendto(sock_fd, (void* )package, package_size, 0, (sockaddr* )&address, sizeof(sockaddr_in));
 	return (is_sent > 0) ? true : false;
 }
 
 std::pair<int, UdpDatagramPackage> UdpSocket::Receive() const {
 	UdpDatagramPackage received_package;
+    std::lock_guard<std::mutex> guard(m);
 	int received_bytes = recvfrom(sock_fd, (void* )&received_package, sizeof(received_package), MSG_DONTWAIT, NULL, NULL);
 	if (received_bytes > 0) {
 		received_package.Deserialize();

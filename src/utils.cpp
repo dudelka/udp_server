@@ -1,6 +1,6 @@
 #include "utils.h"
 
-uint32_t crc32c(uint32_t crc, const unsigned char* buf, size_t len) {
+uint32_t crc32c(uint32_t crc, const unsigned char* buf, std::size_t len) {
 	int k;	
 	crc = ~crc;
 	while (len--) {

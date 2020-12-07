@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <exception>
+#include <utility>
 
 File::File(const std::string& filename, const uint16_t package_size) 
 		: filename_(filename), file_size_(0){
@@ -28,20 +29,20 @@ void File::DivideIntoChunks(std::fstream& file, const uint16_t package_size) {
 		}
 		file_size_ += chunk.size();
 		chunk.shrink_to_fit();
-		chunks_.emplace_back(current_idx++, std::move(chunk));
+		chunks_.push_back({current_idx++, std::move(chunk)});
 	}
 }
 
 uint32_t File::CalculateChecksum() {
 	uint32_t crc = 0;
 	for (const auto& chunk : chunks_) {
-		crc = crc32c(crc, chunk.second.data(), chunk.second.size());
+		crc = crc32c(crc, chunk.data.data(), chunk.data.size());
 	}
 	checksum_ = crc;
 	return checksum_;
 }
 
-void File::AddChunk(std::pair<uint32_t, std::vector<unsigned char>> chunk) {
+void File::AddChunk(File::FileChunk&& chunk) {
 	chunks_.push_back(std::move(chunk));
 }
 
@@ -49,9 +50,8 @@ void File::Sort() {
 	std::sort(
 		begin(chunks_),
 		end(chunks_),
-		[](const std::pair<uint32_t, std::vector<unsigned char>>& lhs, 
-				const std::pair<uint32_t, std::vector<unsigned char>>& rhs) {
-			return lhs.first < rhs.first;
+		[](const FileChunk& lhs, FileChunk& rhs) {
+			return lhs.seq_number < rhs.seq_number;
 		}
 	);
 }
@@ -68,7 +68,7 @@ size_t File::GetChunksCount() const {
 	return chunks_.size();
 }
 
-std::vector<std::pair<uint32_t, std::vector<unsigned char>>> File::Data() const {
+std::vector<File::FileChunk> File::Data() const {
 	return chunks_;
 }
 
