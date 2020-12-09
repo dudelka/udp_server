@@ -2,6 +2,7 @@
 
 #include "datagram.h"
 
+#include <mutex>
 #include <cstdint>
 #include <utility>
 
@@ -13,11 +14,14 @@ class UdpSocket {
 public:
 	UdpSocket();
 
+	UdpSocket(const UdpSocket&) = delete;
+	UdpSocket& operator=(const UdpSocket&) = delete;
+
 	void Bind(const uint16_t port);
 	void SetToNonBlock();
 
 	bool Send(
-        UdpDatagramPackage* package, 
+        UdpDatagramPackage& package, 
         size_t package_size, 
         const sockaddr_in& address
     ) const;
@@ -27,4 +31,6 @@ public:
 private:
 	int sock_fd;
 	sockaddr_in address;
+
+	mutable std::mutex m;
 };

@@ -17,11 +17,11 @@ void UdpDatagramPackage::Deserialize() {
 }
 
 std::pair<UdpDatagramPackage, size_t> CreatePackage(
-        uint32_t seq_number,
-        uint32_t seq_total,
-        uint32_t type,
-        const unsigned char* id,
-        const std::vector<unsigned char>& data
+	uint32_t seq_number,
+	uint32_t seq_total,
+	uint32_t type,
+	const unsigned char* id,
+	const std::vector<unsigned char>& data
 ) {
     UdpDatagramPackage package = {
         .seq_number = seq_number,

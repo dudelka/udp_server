@@ -1,6 +1,5 @@
 #include "my_socket.h"
 
-#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <cstring>
@@ -34,16 +33,13 @@ void UdpSocket::SetToNonBlock() {
 static std::mutex m;
 
 bool UdpSocket::Send(
-        UdpDatagramPackage* package, 
-        size_t package_size, 
-        const sockaddr_in& address
+    UdpDatagramPackage& package, 
+    size_t package_size, 
+    const sockaddr_in& address
 ) const {
-	if (!package) {
-		throw std::runtime_error("Trying to accsess empty package\n");
-	}
-	package->Serialize();
+	package.Serialize();
     std::lock_guard<std::mutex> guard(m);
-	int is_sent = sendto(sock_fd, (void* )package, package_size, 0, (sockaddr* )&address, sizeof(sockaddr_in));
+	int is_sent = sendto(sock_fd, (void* )&package, package_size, 0, (sockaddr* )&address, sizeof(sockaddr_in));
 	return (is_sent > 0) ? true : false;
 }
 

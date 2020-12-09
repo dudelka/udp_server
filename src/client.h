@@ -20,7 +20,7 @@ public:
     uint32_t ProcessData(const File& file, const sockaddr_in& address);
 private:
     void ProcessAndLogSinglePackage(
-        UdpDatagramPackage* package, 
+        UdpDatagramPackage& package, 
         size_t package_size,
         const sockaddr_in& address,
         uint32_t id,
@@ -28,7 +28,7 @@ private:
     );
 
     std::optional<uint32_t> ProcessAndLogReceivedPackage(
-        std::unordered_map<size_t, std::chrono::steady_clock::time_point>* sent,
+        std::unordered_map<size_t, std::chrono::steady_clock::time_point>& sent,
 		const UdpDatagramPackage& received_package,
         uint32_t total_size,
         uint32_t id,
@@ -36,7 +36,7 @@ private:
     );
 
     void ResendPackages(
-        std::unordered_map<size_t, std::chrono::steady_clock::time_point>* sent,
+        std::unordered_map<size_t, std::chrono::steady_clock::time_point>& sent,
         const std::vector<File::FileChunk>& data,
         unsigned char* id_from,
         const sockaddr_in& address,

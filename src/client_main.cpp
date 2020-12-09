@@ -3,6 +3,7 @@
 #include "my_socket.h"
 #include "file.h"
 
+#include <memory>
 #include <cstdint>
 #include <thread>
 #include <future>
@@ -18,9 +19,9 @@ int main() {
 			checksums.push_back(file.CalculateChecksum());
 		}
 
-		UdpSocket socket = InitializeSocket();
+		std::unique_ptr<UdpSocket> socket(InitializeSocket());
 		sockaddr_in address_to_send = ReadAddress();
-        Client client(std::make_unique<UdpSocket>(std::move(socket)));
+        Client client(std::move(socket));
 
 		std::vector<std::future<uint32_t>> received_sums;
 		received_sums.reserve(files.size());

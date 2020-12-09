@@ -32,7 +32,7 @@ uint32_t Client::ProcessData(const File& file, const sockaddr_in& address) {
             auto [package, package_size] = CreatePackage(
                 data[idx].seq_number, data_size, 1u, id_from, data[idx].data
             );
-            ProcessAndLogSinglePackage(&package, package_size, address, file_checksum);
+            ProcessAndLogSinglePackage(package, package_size, address, file_checksum);
             sent[idx] = std::chrono::steady_clock::now();
             ++idx;
 		}
@@ -40,7 +40,7 @@ uint32_t Client::ProcessData(const File& file, const sockaddr_in& address) {
         auto [received_bytes, received_package] = socket_->Receive();
         if (received_bytes > 0 && received_package.type == 0u) {
             std::optional<uint32_t> received_result = ProcessAndLogReceivedPackage(
-                &sent, received_package, data_size, file_checksum
+                sent, received_package, data_size, file_checksum
             );
             if (received_result) {
                 received_sum = *received_result;
@@ -48,22 +48,19 @@ uint32_t Client::ProcessData(const File& file, const sockaddr_in& address) {
             }
         }
 		
-        ResendPackages(&sent, data, id_from, address, file_checksum);
+        ResendPackages(sent, data, id_from, address, file_checksum);
     }
     return received_sum;
 }
 
 void Client::ProcessAndLogSinglePackage(
-        UdpDatagramPackage* package,
-        size_t package_size,
-        const sockaddr_in& address,
-        uint32_t id,
-        std::ostream& os
+	UdpDatagramPackage& package,
+    size_t package_size,
+    const sockaddr_in& address,
+    uint32_t id,
+    std::ostream& os
 ) {
-	if (!package) {
-		throw std::runtime_error("Trying to accsess empty package\n");
-	}
-	uint32_t seq_number = package->seq_number;
+	uint32_t seq_number = package.seq_number;
     bool is_sent = socket_->Send(package, package_size, address);
     if (is_sent) {
         os << "Sent package with id: " << id << ", seq_number = " 
@@ -75,19 +72,16 @@ void Client::ProcessAndLogSinglePackage(
 }
 
 std::optional<uint32_t> Client::ProcessAndLogReceivedPackage(
-        std::unordered_map<size_t, std::chrono::steady_clock::time_point>* sent,
-		const UdpDatagramPackage& received_package,
-        uint32_t total_size,
-        uint32_t id,
-        std::ostream& os
+    std::unordered_map<size_t, std::chrono::steady_clock::time_point>& sent,
+	const UdpDatagramPackage& received_package,
+    uint32_t total_size,
+	uint32_t id,
+    std::ostream& os
 ) {
-	if (!sent) {
-		throw std::runtime_error("Trying to accsess empty unordered_map\n");
-	}
     os << "Received package from server with id: " << id
         << ", seq_number = " << received_package.seq_number << std::endl;
-    if (auto it = sent->find(received_package.seq_number); it != sent->end()) {
-        sent->erase(it);
+    if (auto it = sent.find(received_package.seq_number); it != sent.end()) {
+        sent.erase(it);
     }
     if (received_package.seq_total == total_size) {
         uint32_t received_sum = 0;
@@ -98,25 +92,22 @@ std::optional<uint32_t> Client::ProcessAndLogReceivedPackage(
 }
 
 void Client::ResendPackages(
-        std::unordered_map<size_t, std::chrono::steady_clock::time_point>* sent,
-		const std::vector<File::FileChunk>& data,
-        unsigned char* id_from,
-        const sockaddr_in& address,
-        uint32_t id,
-        std::ostream& os
+	std::unordered_map<size_t, std::chrono::steady_clock::time_point>& sent,
+	const std::vector<File::FileChunk>& data,
+	unsigned char* id_from,
+	const sockaddr_in& address,
+	uint32_t id,
+	std::ostream& os
 ) {
-	if (!sent) {
-		throw std::runtime_error("Trying to accsess empty unordered_map\n");
-	}
     using namespace std::chrono;
     auto current_time = steady_clock::now();
-    for (auto& msg : *sent) {
+    for (auto& msg : sent) {
         if (duration_cast<seconds>(current_time - msg.second) >= seconds{5}) {
 			uint32_t data_size = static_cast<uint32_t>(data.size());
             auto [package, package_size] = CreatePackage(
                 data[msg.first].seq_number, data_size, 1u, id_from, data[msg.first].data
             );
-            socket_->Send(&package, package_size, address);
+            socket_->Send(package, package_size, address);
         	msg.second = steady_clock::now();
         	os << "Resending package with id: " << id
         	    << ", seq_number = " << data[msg.first].seq_number << std::endl;

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <exception>
 #include <cstdint>
+#include <utility>
 #include <string>
 
 #include <arpa/inet.h>
@@ -22,14 +23,14 @@ std::vector<File> ReadFiles(std::istream& is, std::ostream& os) {
 	return result;
 }
 
-UdpSocket InitializeSocket(std::istream& is, std::ostream& os) {
-	UdpSocket socket;
+std::unique_ptr<UdpSocket> InitializeSocket(std::istream& is, std::ostream& os) {
+	std::unique_ptr<UdpSocket> socket = std::make_unique<UdpSocket>();
 	os << "Enter the port for socket to connect. If you dont't know what port to choose then enter 0." << std::endl;
 	uint16_t port = 0;
 	is >> port;
-	socket.Bind(port);
-	socket.SetToNonBlock();
-	return socket;
+	socket->Bind(port);
+	socket->SetToNonBlock();
+	return std::move(socket);
 }
 
 std::string_view GetNumberFromIpAddress(std::string_view ip_address, uint32_t& number, char delimeter) {
