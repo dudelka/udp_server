@@ -30,8 +30,6 @@ void UdpSocket::SetToNonBlock() {
 	}
 }
 
-static std::mutex m;
-
 bool UdpSocket::Send(
     UdpDatagramPackage& package, 
     size_t package_size, 
